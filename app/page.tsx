@@ -1,101 +1,116 @@
-import Image from "next/image";
+// app/page.tsx
+'use client';
 
+import { useState } from 'react';
+import { ethers, BrowserProvider } from 'ethers';
+import WalletConnectProvider from '@walletconnect/ethereum-provider';
+// import OKXWalletSDK from 'okx-wallet-sdk'; // 如果需要使用 OKX 錢包 SDK
 export default function Home() {
-  return (
-    <div className="grid grid-rows-[20px_1fr_20px] items-center justify-items-center min-h-screen p-8 pb-20 gap-16 sm:p-20 font-[family-name:var(--font-geist-sans)]">
-      <main className="flex flex-col gap-8 row-start-2 items-center sm:items-start">
-        <Image
-          className="dark:invert"
-          src="/next.svg"
-          alt="Next.js logo"
-          width={180}
-          height={38}
-          priority
-        />
-        <ol className="list-inside list-decimal text-sm text-center sm:text-left font-[family-name:var(--font-geist-mono)]">
-          <li className="mb-2">
-            Get started by editing{" "}
-            <code className="bg-black/[.05] dark:bg-white/[.06] px-1 py-0.5 rounded font-semibold">
-              app/page.tsx
-            </code>
-            .
-          </li>
-          <li>Save and see your changes instantly.</li>
-        </ol>
+  const [provider, setProvider] = useState<any>(null);
+  const [address, setAddress] = useState<string>('');
+  const [balance, setBalance] = useState<bigint>(BigInt(0));
+  const [walletType, setWalletType] = useState<string>(''); 
+  const [walletConnected, setWalletConnected] = useState<boolean>(false);
+  
+  const connectMetaMask = async () => {
+    if (typeof window !== 'undefined' && (window as any).ethereum) {
+      try {
+        const newProvider = new BrowserProvider((window as any).ethereum);
+        await newProvider.send('eth_requestAccounts', []);
+        setProvider(newProvider);
+        setWalletType('MetaMask');
+        setWalletConnected(true);
+        alert('錢包連接成功！');
+        // 取得錢包地址
+        const signer = await newProvider.getSigner();
+        const address = await signer.getAddress();
+        // 取得錢包餘額
+        const balance = await newProvider.getBalance(address);
+        // 顯示錢包地址和餘額
+        setAddress(address);
+        setBalance(balance);
+      } catch (error) {
+        console.error(error);
+      }
+    } else {
+      alert('請安裝MetaMask或其他以太坊錢包擴展。');
+    }
+  };
 
-        <div className="flex gap-4 items-center flex-col sm:flex-row">
-          <a
-            className="rounded-full border border-solid border-transparent transition-colors flex items-center justify-center bg-foreground text-background gap-2 hover:bg-[#383838] dark:hover:bg-[#ccc] text-sm sm:text-base h-10 sm:h-12 px-4 sm:px-5"
-            href="https://vercel.com/new?utm_source=create-next-app&utm_medium=appdir-template-tw&utm_campaign=create-next-app"
-            target="_blank"
-            rel="noopener noreferrer"
-          >
-            <Image
-              className="dark:invert"
-              src="/vercel.svg"
-              alt="Vercel logomark"
-              width={20}
-              height={20}
-            />
-            Deploy now
-          </a>
-          <a
-            className="rounded-full border border-solid border-black/[.08] dark:border-white/[.145] transition-colors flex items-center justify-center hover:bg-[#f2f2f2] dark:hover:bg-[#1a1a1a] hover:border-transparent text-sm sm:text-base h-10 sm:h-12 px-4 sm:px-5 sm:min-w-44"
-            href="https://nextjs.org/docs?utm_source=create-next-app&utm_medium=appdir-template-tw&utm_campaign=create-next-app"
-            target="_blank"
-            rel="noopener noreferrer"
-          >
-            Read our docs
-          </a>
-        </div>
-      </main>
-      <footer className="row-start-3 flex gap-6 flex-wrap items-center justify-center">
-        <a
-          className="flex items-center gap-2 hover:underline hover:underline-offset-4"
-          href="https://nextjs.org/learn?utm_source=create-next-app&utm_medium=appdir-template-tw&utm_campaign=create-next-app"
-          target="_blank"
-          rel="noopener noreferrer"
-        >
-          <Image
-            aria-hidden
-            src="/file.svg"
-            alt="File icon"
-            width={16}
-            height={16}
-          />
-          Learn
-        </a>
-        <a
-          className="flex items-center gap-2 hover:underline hover:underline-offset-4"
-          href="https://vercel.com/templates?framework=next.js&utm_source=create-next-app&utm_medium=appdir-template-tw&utm_campaign=create-next-app"
-          target="_blank"
-          rel="noopener noreferrer"
-        >
-          <Image
-            aria-hidden
-            src="/window.svg"
-            alt="Window icon"
-            width={16}
-            height={16}
-          />
-          Examples
-        </a>
-        <a
-          className="flex items-center gap-2 hover:underline hover:underline-offset-4"
-          href="https://nextjs.org?utm_source=create-next-app&utm_medium=appdir-template-tw&utm_campaign=create-next-app"
-          target="_blank"
-          rel="noopener noreferrer"
-        >
-          <Image
-            aria-hidden
-            src="/globe.svg"
-            alt="Globe icon"
-            width={16}
-            height={16}
-          />
-          Go to nextjs.org →
-        </a>
-      </footer>
+  const connectWalletConnect = async () => {
+    try {
+      const walletConnectProvider = await WalletConnectProvider.init({
+        projectId: 'abc6b0686c028daa288bd7c010df5dda',
+        chains: [56, 66, 1, 137], // 支持BSC, OKB, ETH, SOL
+        showQrModal: true,
+      });
+
+      await walletConnectProvider.connect();
+
+      const newProvider = new BrowserProvider(walletConnectProvider);
+      setProvider(newProvider);
+      setWalletType('WalletConnect');
+      setWalletConnected(true);
+      // 取得錢包地址
+      const signer = await newProvider.getSigner();
+      const address = await signer.getAddress();
+      // 取得錢包餘額
+      const balance = await newProvider.getBalance(address);
+      // 顯示錢包地址和餘額
+      setAddress(address);
+      setBalance(balance);
+
+      alert('錢包連接成功！');
+    } catch (error) {
+      console.error(error);
+    }
+  };
+
+  // const connectOKXWallet = async () => {
+  //   try {
+  //     const okxWallet = new OKXWalletSDK();
+  //     const accounts = await okxWallet.enable();
+  //     setProvider(okxWallet);
+  //     setWalletConnected(true);
+  //     setWalletType('OKXWallet');
+  //     alert('OKX 錢包連接成功！');
+  //     // 取得錢包地址
+  //     const signer = await okxWallet.getSigner();
+  //     const address = await signer.getAddress();
+  //     // 取得錢包餘額
+  //     const balance = await okxWallet.getBalance(address);
+  //     // 顯示錢包地址和餘額
+  //     setAddress(address);
+  //     setBalance(balance);
+  //   } catch (error) {
+  //     console.error(error);
+  //   }
+  // };
+
+ // 斷開錢包連接的函數
+ const disconnectWallet = async () => {
+  if (provider && walletType === 'WalletConnect') {
+    // 如果使用 WalletConnect，需要關閉連接
+    await provider.provider.disconnect();
+  }
+  // 清除狀態
+  setProvider(null);
+  setWalletConnected(false);
+  setWalletType('');
+  alert('錢包已斷開連接');
+};
+
+  return (
+    <div>
+      <h1>Telegram Mini App 加密貨幣錢包連接範例</h1>
+      <button onClick={connectMetaMask}>連接 MetaMask</button>
+      <button onClick={connectWalletConnect}>使用 WalletConnect 連接錢包</button>
+      {/* <button onClick={connectOKXWallet}>連接 OKX 錢包</button> */}
+      <button onClick={disconnectWallet}>斷開錢包</button>
+      <div>
+        <h2>錢包地址: {address}</h2>
+        <h2>錢包餘額: {balance ? ethers.formatEther(balance) : '0'} ETH</h2>
+      </div>
     </div>
   );
 }
